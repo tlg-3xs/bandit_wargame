@@ -2,9 +2,12 @@
 import pexpect
 import argparse
 from os.path import expanduser, join, isfile
+import requests
+from bs4 import BeautifulSoup as BS
 
 login_prompt = "bandit.+@.*password:"
 passwd_file = join(expanduser('~'), 'bandit')
+url = 'https://overthewire.org/wargames/bandit/bandit{}.html'
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -57,10 +60,16 @@ def write_pass(args):
         f.write(f'bandit{args.level} {args.passwd}\n')
 
 
+def get_mission(args):
+    r = requests.get(url.format(args.level + 1))
+    soup = BS(r.content, features="html.parser")
+    return soup.find('div', {"id": "content"}).text.strip()
+
+
 def main():
     args = parse_args()
 
-    if args.last or not args.level:
+    if args.last or args.level is None:
         args.level = get_last(args)
     
     if args.key is None and args.passwd is None:
@@ -102,6 +111,7 @@ def main():
         for alias in command_list:
             p.sendline(alias)
             p.expect(shell_prompt)
+    print("Mission:", get_mission(args), sep='\n\n', end='\n\n')
     p.sendline('')  # Para imprimir el prompt, se manda una linea en blanco (como si se hubiera dado a enter)
     p.expect('')    # Y hace un expect vacío, para no consumir el buffer y que al hacer interact, imprima el prompt
     p.interact()
