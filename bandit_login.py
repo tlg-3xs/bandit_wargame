@@ -104,6 +104,8 @@ def main():
     if args.passwd:
         write_pass(args)
     
+    print("Mission:", get_mission(args), sep='\n\n', end='\n\n')
+
     if index == 2: # Si se cierra de golpe la sesión, muestra todo el output
         print(p.before.decode())
         return
@@ -111,7 +113,6 @@ def main():
         for alias in command_list:
             p.sendline(alias)
             p.expect(shell_prompt)
-    print("Mission:", get_mission(args), sep='\n\n', end='\n\n')
     p.sendline('')  # Para imprimir el prompt, se manda una linea en blanco (como si se hubiera dado a enter)
     p.expect('')    # Y hace un expect vacío, para no consumir el buffer y que al hacer interact, imprima el prompt
     p.interact()
