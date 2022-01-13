@@ -8,6 +8,8 @@ from bs4 import BeautifulSoup as BS
 login_prompt = "bandit.+@.*password:"
 passwd_file = join(expanduser('~'), 'bandit')
 url = 'https://overthewire.org/wargames/bandit/bandit{}.html'
+ssh_conf = join(expanduser('~'), '.ssh', 'config')
+ssh_bandit = ['\nHost bandit\n  Hostname bandit.labs.overthewire.org\n  Port 2220\n']
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -25,6 +27,18 @@ def parse_args():
     group.add_argument('-p', '--password', dest='passwd', nargs='?', help="Password to log in")
     group.add_argument('-i', '--identity-file', dest='key', nargs='?', help="SSH key to log in")
     return parser.parse_args()
+
+def ensure_bandit_ssh_conf():
+    with open(ssh_conf, 'r') as f:
+        lines = f.readlines()
+    found = False
+    for line in lines:
+        if 'hostname bandit' in line.lower():
+            found = True
+            break
+    if not found:
+        with open(ssh_conf, 'a') as f:
+            f.write(ssh_bandit)
 
 def read_file(args):
     if not isfile(args.passwd_file):  # Si no se encuentra el archivo, se crea uno con el nivel inicial
@@ -68,7 +82,7 @@ def get_mission(args):
 
 def main():
     args = parse_args()
-
+    ensure_bandit_ssh_conf()
     if args.last or args.level is None:
         args.level = get_last(args)
     
@@ -80,7 +94,7 @@ def main():
         else:
             args.passwd = passwd
     
-    command_list = ['alias ll="ls -lahF"', f'alias get_cpw="cat /etc/bandit_pass/bandit{args.level}"']
+    command_list = ['alias ll="ls -lahF"', f'alias get_cpw="cat /etc/bandit_pass/bandit{args.level}"', 'EDITOR=vim']
     cmd = 'sftp' if args.sftp else 'ssh'
     shell_prompt = 'bandit[0-9]+@bandit:.*\$' if not args.sftp else 'sftp>'
     
@@ -97,6 +111,9 @@ def main():
     
     if index == 1:  # Ha devuelto otra vez el prompt de login, lo que significa que la contraseña es incorrecta
         print(f"Incorrect bandit{args.level} password!")
+        if args.key:
+            print("Check permissions on private key file!!")
+        print(f"Error:\n{p.before.decode().strip()}")
         return
     
     # Pasado este punto, se entiende que la contraseña es correcta y se procede a escribirla
